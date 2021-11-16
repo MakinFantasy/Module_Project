@@ -94,6 +94,39 @@ class YaDisk:
         pprint(f"Загрузка завершена")
 
 
+def json_file(list_data):
+    for check in list_data:
+        for check_2 in list_data:
+            if (check["file_name"] == check_2["file_name"]) and (check["url"] != check_2["url"]):
+                check["file_name"] = check["file_name"] + "_" + "(" + check["date"] + ")"
+                check_2["file_name"] = check_2["file_name"] + "_" + "(" + check_2["date"] + ")"
+    return list_data
+
+
+def rework_json_file(dict_file):
+    info = dict_file
+    for check_2 in info:
+        check_2["file_name"] += ".jpeg"
+        del check_2["date"]
+        del check_2["url"]
+    with open("data_file.json", "w") as file:
+        json.dump(info, file, indent=5)
+    return info
+
+
+id_vk = "552934290"
+ya_token = "AQAAAAAZJUXrAADLW5xzprLGbk6HuIyygQYecHU"
+count = 50
+
+user = VkPhotos(id_vk)
+images = user.get_photos(count)
+file_dict = json_file(images)
+
+uploader = YaDisk(file_dict, ya_token, id_vk)
+uploader.upload()
+uploader.get_list_photos_yadisk()
+print()
+pprint(rework_json_file(file_dict))
 
 
 
