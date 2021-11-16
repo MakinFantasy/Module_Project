@@ -1,42 +1,111 @@
+import json
 import requests
 from pprint import pprint
-import json
+from datetime import datetime
 
 
 class VkPhotos:
-    def __init__(self, vk_id,):
-        self.vk_id = vk_id
+    def __init__(self, vk_id):
         self.url = "https://api.vk.com/method/"
-        self.access_token = "958eb5d439726565e9333aa30e50e0f937ee432e927f0dbd541c541887d919a7c56f95c04217915c32008"
-        self.vk_params = {
-            "access_token": self.access_token,
-            "owner_id": self.vk_id,
+        self.token = "958eb5d439726565e9333aa30e50e0f937ee432e927f0dbd541c541887d919a7c56f95c04217915c32008"
+        self.id = vk_id
+        self.params = {
+            "access_token": self.token,
+            "owner_id": self.id,
             "v": "5.131"
         }
 
-    def get_phots_from_vk(self, photos_count):
-        info_list = []
-        likes_dict ={}
-        photos_params ={
+    def get_photos(self, photos_count):
+        list_get_photos = []
+        dict_of_likes_url = {}
+        get_photos_params = {
             "album_id": "profile",
             "extended": "1",
             "count": photos_count,
-            "photo_size": "1"
+            "photo_sizes": "1"
         }
-
-        photos_url = self.url + "photos.get"
-        response = requests.get(photos_url, params = {
-            **self.vk_params,
-            **photos_params
+        get_photos_url = self.url + "photos.get"
+        response = requests.get(get_photos_url, params={
+            **self.params, **get_photos_params
         }).json()
-        for item in response["response"]["items"]:
-            likes = str(item["likes"]["count"])
-            photo_url = item["sizes"][-1]["url"]
-            likes_dict["file_name"] = likes
-            likes_dict["sizes"] = item["sizes"][-1]["type"]
-            likes_dict["url"] = photo_url
-            info_list.append(likes_dict)
-        return info_list
+        for items in response["response"]["items"]:
+            photos_likes = str(items["likes"]["count"])
+            photo_url = items["sizes"][len(items["sizes"]) - 1]["url"]
+            date = items["date"]
+            date = str(datetime.utcfromtimestamp(date).strftime('%Y-%m-%d_%H_%M_%S'))
+            dict_of_likes_url["file_name"] = photos_likes
+            dict_of_likes_url["sizes"] = items["sizes"][len(items["sizes"]) - 1]["type"]
+            dict_of_likes_url["url"] = photo_url
+            dict_of_likes_url["date"] = date
+            list_get_photos.append(dict_of_likes_url)
+            dict_of_likes_url = {}
+        return list_get_photos
+
+
+class YaDisk:
+    def __init__(self, list_to_upload, token, vk_id):
+        self.token = token
+        self.url = "https://cloud-api.yandex.net/v1/disk/resources/"
+        self.list_to_upload = list_to_upload
+        self.headers = {
+            'Authorization': self.token
+        }
+        self.id = vk_id
+
+    def get_list_photos_yadisk(self):
+        result_list = []
+        response = requests.get(self.url + "files", headers=self.headers).json()
+        for dict_params in response["items"]:
+            name = dict_params["name"]
+            result_list.append(name)
+        return result_list
+
+    def upload(self):
+        photos_check = self.get_list_photos_yadisk()
+        photos_upload_count = 0
+        folder_create = requests.put(self.url, headers=self.headers, params={
+            "path": self.id
+        })
+        if folder_create.status_code == 201 or folder_create.status_code == 409:
+            if folder_create.status_code == 201:
+                pprint(f"Папка {self.id} создана")
+            else:
+                pprint(f"Папка {self.id} уже существует")
+            for value in self.list_to_upload:
+                info = value["file_name"] + ".jpeg"
+                file_name = self.id + "/" + value["file_name"] + ".jpeg"
+                file_url = value["url"]
+                params = {
+                    "path": file_name,
+                    "url": file_url
+                }
+                if info not in photos_check:
+                    response = requests.post(self.url + "upload", headers=self.headers, params=params)
+                    if response.status_code != 202:
+                        pprint(f"Произошла ошибка {response.status_code} при загрузке {file_name}")
+                    else:
+                        pprint(f"Загрузка фото {info} прошла успешно")
+                        photos_upload_count += 1
+                else:
+                    pprint(f"Файл с именем {info} уже существует")
+        else:
+            print(f"Произошла ошибка {folder_create.status_code}")
+        pprint(f"Файлов загружено: {photos_upload_count}")
+        pprint(f"Загрузка завершена")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
