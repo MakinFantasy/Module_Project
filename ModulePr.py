@@ -115,7 +115,7 @@ def rework_json_file(dict_file):
 
 
 id_vk = "552934290"
-ya_token = "AQAAAAAZJUXrAADLW5xzprLGbk6HuIyygQYecHU"
+ya_token = "..."
 count = 50
 
 user = VkPhotos(id_vk)
